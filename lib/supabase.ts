@@ -54,7 +54,54 @@ export type Tienda = {
   logo_url: string | null;
   moneda: string;
   slug: string;
+  plan: string;
+  fecha_inicio_suscripcion: string | null;
+  fecha_fin_suscripcion: string | null;
+  suscripcion_activa: boolean;
+  visible_forzado: boolean | null;
 };
+
+export type Rol = "superadmin" | "admin_tienda" | "editor";
+
+export type UsuarioTienda = {
+  id: string;
+  user_id: string;
+  tienda_id: string | null;
+  rol: Rol;
+};
+
+export type ProductoFoto = {
+  id: string;
+  producto_id: string;
+  url: string;
+  orden: number;
+};
+
+export type Cliente = {
+  id: string;
+  tienda_id: string;
+  nombre: string | null;
+  telefono: string | null;
+  email: string | null;
+  fecha_nacimiento: string | null;
+  notas: string | null;
+};
+
+/** Visibilidad real de una tienda: el override manual manda sobre el estado de suscripción. */
+export function tiendaVisible(tienda: Pick<Tienda, "visible_forzado" | "suscripcion_activa">) {
+  return tienda.visible_forzado ?? tienda.suscripcion_activa;
+}
+
+/** Genera un slug simple a partir del nombre de la tienda (sin acentos, minúsculas, guiones). */
+export function generarSlug(nombre: string) {
+  return nombre
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
 
 /** Devuelve la oferta vigente de un producto (si existe), comparando con la hora actual. */
 export function ofertaVigente(ofertas: Oferta[] | undefined, ahora = new Date()) {

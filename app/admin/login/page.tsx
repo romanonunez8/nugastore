@@ -80,6 +80,10 @@ function LoginForm() {
           >
             {enviando ? "Ingresando…" : "Ingresar"}
           </button>
+
+          <a href="/admin/login/recuperar" className="block text-center text-sm text-teal font-medium">
+            ¿Olvidaste tu contraseña?
+          </a>
         </form>
       </div>
     </div>

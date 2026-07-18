@@ -13,8 +13,23 @@ function BarraAdmin() {
   if (!sesion) return null;
 
   const linksSuperadmin = [{ href: "/admin/tiendas", label: "Tiendas" }];
-  const linksTienda = [{ href: "/admin/tienda", label: "Mi tienda" }];
-  const links = sesion.rol === "superadmin" ? linksSuperadmin : linksTienda;
+  const linksAdminTienda = [
+    { href: "/admin/tienda/productos", label: "Productos" },
+    { href: "/admin/tienda/categorias", label: "Categorías" },
+    { href: "/admin/tienda/ventas", label: "Ventas" },
+    { href: "/admin/tienda/equipo", label: "Equipo" },
+    { href: "/admin/tienda", label: "Mi tienda" },
+  ];
+  const linksVendedor = [
+    { href: "/admin/tienda/ventas", label: "Ventas" },
+    { href: "/admin/tienda/productos", label: "Productos" },
+  ];
+  const links =
+    sesion.rol === "superadmin"
+      ? linksSuperadmin
+      : sesion.rol === "admin_tienda"
+      ? linksAdminTienda
+      : linksVendedor;
 
   async function salir() {
     await cerrarSesion();
@@ -31,12 +46,20 @@ function BarraAdmin() {
               key={l.href}
               href={l.href}
               className={`text-sm font-medium ${
-                pathname?.startsWith(l.href) ? "text-teal" : "text-inkSoft"
+                pathname === l.href ? "text-teal" : "text-inkSoft"
               }`}
             >
               {l.label}
             </Link>
           ))}
+          <Link
+            href="/admin/cuenta"
+            className={`text-sm font-medium ${
+              pathname === "/admin/cuenta" ? "text-teal" : "text-inkSoft"
+            }`}
+          >
+            Mi cuenta
+          </Link>
           <span className="text-xs text-inkSoft border-l border-line pl-4">
             {sesion.rol === "superadmin" ? "Superadmin" : sesion.rol === "admin_tienda" ? "Admin de tienda" : "Editor"}
           </span>

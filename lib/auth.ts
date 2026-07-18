@@ -12,6 +12,19 @@ export async function iniciarSesion(email: string, password: string) {
   return data;
 }
 
+export async function solicitarRecuperacion(email: string) {
+  const origen = typeof window !== "undefined" ? window.location.origin : "";
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origen}/admin/actualizar-password`,
+  });
+  if (error) throw error;
+}
+
+export async function actualizarPassword(nuevaPassword: string) {
+  const { error } = await supabase.auth.updateUser({ password: nuevaPassword });
+  if (error) throw error;
+}
+
 export async function cerrarSesion() {
   await supabase.auth.signOut();
 }

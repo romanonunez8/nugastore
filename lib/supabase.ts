@@ -41,6 +41,7 @@ export type Producto = {
   precio: number;
   foto_url: string | null;
   activo: boolean;
+  destacado?: boolean;
   categorias?: Categoria | null;
   variantes?: Variante[];
   ofertas?: Oferta[];
@@ -68,6 +69,7 @@ export type UsuarioTienda = {
   user_id: string;
   tienda_id: string | null;
   rol: Rol;
+  email?: string | null;
 };
 
 export type ProductoFoto = {
@@ -75,6 +77,16 @@ export type ProductoFoto = {
   producto_id: string;
   url: string;
   orden: number;
+};
+
+export type Venta = {
+  id: string;
+  variante_id: string;
+  cliente_id: string | null;
+  cantidad: number;
+  precio_unitario: number | null;
+  fecha: string;
+  canal: string;
 };
 
 export type Cliente = {

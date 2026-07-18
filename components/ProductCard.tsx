@@ -1,11 +1,20 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { Producto } from "@/lib/supabase";
-import { ofertaVigente, stockTotal } from "@/lib/supabase";
+import type { Producto, Oferta } from "@/lib/supabase";
+import { ofertaAplicable, precioConOferta, fotoPortada, stockTotal } from "@/lib/supabase";
 import Countdown from "./Countdown";
+import TiendaBadge from "./TiendaBadge";
 
-export default function ProductCard({ producto }: { producto: Producto }) {
-  const oferta = ofertaVigente(producto.ofertas);
+export default function ProductCard({
+  producto,
+  ofertas,
+}: {
+  producto: Producto;
+  ofertas: Oferta[];
+}) {
+  const oferta = ofertaAplicable(producto, ofertas);
+  const precioFinal = precioConOferta(producto.precio, oferta);
+  const foto = fotoPortada(producto);
   const stock = stockTotal(producto.variantes);
   const agotado = stock <= 0;
 
@@ -15,9 +24,9 @@ export default function ProductCard({ producto }: { producto: Producto }) {
       className="group flex flex-col rounded-card bg-white shadow-card overflow-hidden border border-line/60 focus-visible:outline-teal"
     >
       <div className="relative aspect-[3/4] w-full bg-tealSoft overflow-hidden">
-        {producto.foto_url ? (
+        {foto ? (
           <Image
-            src={producto.foto_url}
+            src={foto}
             alt={producto.nombre}
             fill
             sizes="(max-width: 768px) 50vw, 25vw"
@@ -42,6 +51,10 @@ export default function ProductCard({ producto }: { producto: Producto }) {
             </span>
           </div>
         )}
+
+        <div className="absolute bottom-2 left-2">
+          <TiendaBadge tienda={producto.tiendas} />
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-1 p-3">
@@ -58,7 +71,7 @@ export default function ProductCard({ producto }: { producto: Producto }) {
           {oferta ? (
             <>
               <span className="font-display text-[17px] font-semibold text-berry">
-                Bs {oferta.precio_oferta.toFixed(2)}
+                Bs {precioFinal.toFixed(2)}
               </span>
               <span className="font-body text-[12px] text-inkSoft line-through">
                 Bs {producto.precio.toFixed(2)}

@@ -17,8 +17,12 @@ export type Categoria = {
 
 export type Oferta = {
   id: string;
-  producto_id: string;
-  precio_oferta: number;
+  tipo: "producto" | "categoria" | "tienda";
+  producto_id: string | null;
+  categoria_id: string | null;
+  tienda_id: string | null;
+  precio_oferta: number | null;
+  porcentaje: number | null;
   inicia: string;
   termina: string;
 };
@@ -45,6 +49,7 @@ export type Producto = {
   categorias?: Categoria | null;
   variantes?: Variante[];
   ofertas?: Oferta[];
+  producto_fotos?: ProductoFoto[];
   tiendas?: Tienda | null;
 };
 
@@ -60,6 +65,10 @@ export type Tienda = {
   fecha_fin_suscripcion: string | null;
   suscripcion_activa: boolean;
   visible_forzado: boolean | null;
+  mensaje_whatsapp?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  tiktok?: string | null;
 };
 
 export type Rol = "superadmin" | "admin_tienda" | "editor";
@@ -115,16 +124,44 @@ export function generarSlug(nombre: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-/** Devuelve la oferta vigente de un producto (si existe), comparando con la hora actual. */
-export function ofertaVigente(ofertas: Oferta[] | undefined, ahora = new Date()) {
-  if (!ofertas || ofertas.length === 0) return null;
-  return (
-    ofertas.find((o) => {
-      const inicia = new Date(o.inicia);
-      const termina = new Date(o.termina);
-      return ahora >= inicia && ahora <= termina;
-    }) ?? null
+/** Devuelve la oferta activa aplicable a un producto, respetando la prioridad
+ * producto > categoría > tienda (la misma lógica que fn_precio_vigente en SQL). */
+export function ofertaAplicable(
+  producto: Pick<Producto, "id" | "categoria_id" | "tienda_id">,
+  ofertas: Oferta[],
+  ahora = new Date()
+): Oferta | null {
+  const activas = ofertas.filter((o) => new Date(o.inicia) <= ahora && ahora <= new Date(o.termina));
+
+  const deProducto = activas.find((o) => o.tipo === "producto" && o.producto_id === producto.id);
+  if (deProducto) return deProducto;
+
+  const deCategoria = activas.find(
+    (o) => o.tipo === "categoria" && o.categoria_id === producto.categoria_id
   );
+  if (deCategoria) return deCategoria;
+
+  const deTienda = activas.find((o) => o.tipo === "tienda" && o.tienda_id === producto.tienda_id);
+  if (deTienda) return deTienda;
+
+  return null;
+}
+
+/** Calcula el precio final aplicando la oferta (precio fijo o porcentaje). */
+export function precioConOferta(precio: number, oferta: Oferta | null) {
+  if (!oferta) return precio;
+  if (oferta.precio_oferta != null) return oferta.precio_oferta;
+  if (oferta.porcentaje != null) return Math.round(precio * (1 - oferta.porcentaje / 100) * 100) / 100;
+  return precio;
+}
+
+/** Foto de portada: la primera del carrusel (por orden), con respaldo al campo viejo foto_url. */
+export function fotoPortada(producto: Producto): string | null {
+  if (producto.producto_fotos && producto.producto_fotos.length > 0) {
+    const ordenadas = [...producto.producto_fotos].sort((a, b) => a.orden - b.orden);
+    return ordenadas[0].url;
+  }
+  return producto.foto_url ?? null;
 }
 
 /** Suma el stock de todas las variantes de un producto. */

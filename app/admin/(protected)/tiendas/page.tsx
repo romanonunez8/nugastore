@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { supabase, tiendaVisible, type Tienda } from "@/lib/supabase";
 import { useAdminAuth } from "@/lib/admin-auth-context";
 import { NuevaTiendaForm } from "@/components/admin/NuevaTiendaForm";
@@ -75,6 +76,9 @@ function TiendaRow({ tienda, onCambio }: { tienda: Tienda; onCambio: () => void 
           <option value="on">Forzar visible</option>
           <option value="off">Forzar oculta</option>
         </select>
+        <Link href={`/admin/tiendas/${tienda.id}`} className="text-sm font-medium text-teal">
+          Editar
+        </Link>
       </div>
     </div>
   );

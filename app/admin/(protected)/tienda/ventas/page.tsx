@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase, type Producto, type Variante, type Cliente, type Venta } from "@/lib/supabase";
 import { useAdminAuth } from "@/lib/admin-auth-context";
+import { mensajeErrorAmigable } from "@/lib/errors";
 
 export default function VentasPage() {
   const { sesion } = useAdminAuth();
@@ -153,7 +154,7 @@ export default function VentasPage() {
       cargarProductos();
       cargarVentasRecientes();
     } catch (err) {
-      const detalle = err instanceof Error ? err.message : "Error desconocido";
+      const detalle = mensajeErrorAmigable(err);
       setError(`No se pudo registrar la venta: ${detalle}`);
       cargarProductos();
       if (productoId) {

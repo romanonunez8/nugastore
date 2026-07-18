@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase, type Producto, type Categoria } from "@/lib/supabase";
+import { supabase, type Producto, type Categoria, type Oferta } from "@/lib/supabase";
 import ProductCard from "@/components/ProductCard";
 import CategoryFilter from "@/components/CategoryFilter";
 
 export default function InicioPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
@@ -16,7 +17,7 @@ export default function InicioPage() {
     async function cargar() {
       setCargando(true);
 
-      const [{ data: cats }, { data: prods }] = await Promise.all([
+      const [{ data: cats }, { data: prods }, { data: ofs }] = await Promise.all([
         supabase
           .from("categorias")
           .select("*")
@@ -25,13 +26,15 @@ export default function InicioPage() {
         supabase
           .from("productos")
           .select(
-            "*, categorias(*), variantes(*), ofertas(*)"
+            "*, categorias(*), variantes(*), producto_fotos(*), tiendas(*)"
           )
           .eq("activo", true),
+        supabase.from("ofertas").select("*"),
       ]);
 
       setCategorias(cats ?? []);
       setProductos(prods ?? []);
+      setOfertas(ofs ?? []);
       setCargando(false);
     }
     cargar();
@@ -97,7 +100,7 @@ export default function InicioPage() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {productosFiltrados.map((p) => (
-              <ProductCard key={p.id} producto={p} />
+              <ProductCard key={p.id} producto={p} ofertas={ofertas} />
             ))}
           </div>
         )}

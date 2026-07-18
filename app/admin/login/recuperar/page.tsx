@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { solicitarRecuperacion } from "@/lib/auth";
+import { mensajeErrorAmigable } from "@/lib/errors";
 
 export default function RecuperarPage() {
   const [email, setEmail] = useState("");
@@ -18,7 +19,7 @@ export default function RecuperarPage() {
       await solicitarRecuperacion(email);
       setEnviado(true);
     } catch (err) {
-      const detalle = err instanceof Error ? err.message : "Error desconocido";
+      const detalle = mensajeErrorAmigable(err);
       setError(`No se pudo enviar el correo: ${detalle}`);
     } finally {
       setEnviando(false);

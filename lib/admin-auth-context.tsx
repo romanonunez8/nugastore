@@ -26,8 +26,8 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [sesion, setSesion] = useState<SesionRol | null>(null);
   const router = useRouter();
 
-  async function cargar() {
-    setCargando(true);
+  async function cargar(mostrarCargando = true) {
+    if (mostrarCargando) setCargando(true);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -51,8 +51,11 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     cargar();
+    // Revisiones posteriores (ej. al volver a la pestaña, Supabase refresca el token
+    // automáticamente) no deben mostrar la pantalla de carga ni desmontar la página,
+    // porque eso borraría cualquier formulario que la persona esté completando.
     const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      cargar();
+      cargar(false);
     });
     return () => listener.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { actualizarPassword, cerrarSesion } from "@/lib/auth";
+import { mensajeErrorAmigable } from "@/lib/errors";
 
 export default function ActualizarPasswordPage() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function ActualizarPasswordPage() {
       await cerrarSesion();
       setTimeout(() => router.replace("/admin/login"), 2000);
     } catch (err) {
-      const detalle = err instanceof Error ? err.message : "Error desconocido";
+      const detalle = mensajeErrorAmigable(err);
       setError(`No se pudo actualizar la contraseña: ${detalle}`);
     } finally {
       setGuardando(false);

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase, type UsuarioTienda } from "@/lib/supabase";
 import { useAdminAuth } from "@/lib/admin-auth-context";
+import { mensajeErrorAmigable } from "@/lib/errors";
 
 export default function EquipoPage() {
   const { sesion } = useAdminAuth();
@@ -56,7 +57,7 @@ export default function EquipoPage() {
       setEmail("");
       cargar();
     } catch (err) {
-      const detalle = err instanceof Error ? err.message : "Error desconocido";
+      const detalle = mensajeErrorAmigable(err);
       setError(detalle);
     } finally {
       setInvitando(false);

@@ -14,7 +14,7 @@ export default function NuevoProductoPage() {
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [categoriaId, setCategoriaId] = useState("");
-  const [precio, setPrecio] = useState<number>(0);
+  const [precioTexto, setPrecioTexto] = useState("0");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +42,7 @@ export default function NuevoProductoPage() {
         nombre,
         descripcion: descripcion || null,
         categoria_id: categoriaId || null,
-        precio,
+        precio: parseFloat(precioTexto || "0"),
         activo: true,
       })
       .select()
@@ -55,7 +55,7 @@ export default function NuevoProductoPage() {
       return;
     }
 
-    router.replace(`/admin/tienda/productos/${data.id}`);
+    router.replace(`/admin/tienda/productos/${data.id}?creado=1`);
   }
 
   if (sesion && sesion.rol !== "admin_tienda") {
@@ -121,8 +121,9 @@ export default function NuevoProductoPage() {
               type="number"
               min={0}
               step="0.01"
-              value={precio}
-              onChange={(e) => setPrecio(parseFloat(e.target.value || "0"))}
+              inputMode="decimal"
+              value={precioTexto}
+              onChange={(e) => setPrecioTexto(e.target.value)}
               className="w-full rounded-card border border-line px-4 py-2.5 outline-none focus:border-teal"
             />
           </div>

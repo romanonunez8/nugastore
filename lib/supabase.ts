@@ -96,6 +96,8 @@ export type Venta = {
   precio_unitario: number | null;
   fecha: string;
   canal: string;
+  vendido_por?: string | null;
+  vendido_por_email?: string | null;
 };
 
 export type Cliente = {

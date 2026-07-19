@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase, type Variante } from "@/lib/supabase";
+import { CampoNumero } from "./CampoNumero";
 
 export function VariantesEditor({ productoId }: { productoId: string }) {
   const [variantes, setVariantes] = useState<Variante[]>([]);
@@ -68,11 +69,10 @@ export function VariantesEditor({ productoId }: { productoId: string }) {
               <span className="flex-1 text-sm text-ink">
                 {v.talla ?? "—"} {v.color ? `· ${v.color}` : ""}
               </span>
-              <input
-                type="number"
+              <CampoNumero
                 min={0}
-                value={v.stock}
-                onChange={(e) => actualizarStock(v.id, parseInt(e.target.value || "0", 10))}
+                valor={v.stock}
+                onCambio={(n) => actualizarStock(v.id, n)}
                 className="w-20 rounded-card border border-line px-2 py-1 text-sm outline-none focus:border-teal"
               />
               <button onClick={() => eliminar(v.id)} className="text-berry text-xs font-medium">
@@ -104,11 +104,10 @@ export function VariantesEditor({ productoId }: { productoId: string }) {
         </div>
         <div>
           <label className="block text-xs text-inkSoft mb-1">Stock</label>
-          <input
-            type="number"
+          <CampoNumero
             min={0}
-            value={stock}
-            onChange={(e) => setStock(parseInt(e.target.value || "0", 10))}
+            valor={stock}
+            onCambio={setStock}
             className="w-20 rounded-card border border-line px-3 py-2 text-sm outline-none focus:border-teal"
           />
         </div>

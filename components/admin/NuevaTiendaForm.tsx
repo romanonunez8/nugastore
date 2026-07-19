@@ -4,13 +4,14 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { generarSlug } from "@/lib/supabase";
 import { SubirLogo } from "./SubirLogo";
+import { valorFechaLocal } from "@/lib/fecha";
 
 export function NuevaTiendaForm({ onCreada }: { onCreada: () => void }) {
   const [abierto, setAbierto] = useState(false);
   const [nombre, setNombre] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [plan, setPlan] = useState("emprende");
-  const [fechaInicio, setFechaInicio] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fechaInicio, setFechaInicio] = useState(() => valorFechaLocal());
   const [fechaFin, setFechaFin] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);

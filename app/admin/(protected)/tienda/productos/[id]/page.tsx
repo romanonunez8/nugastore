@@ -6,6 +6,7 @@ import { supabase, type Categoria, type Producto } from "@/lib/supabase";
 import { useAdminAuth } from "@/lib/admin-auth-context";
 import { CarruselFotos } from "@/components/admin/CarruselFotos";
 import { VariantesEditor } from "@/components/admin/VariantesEditor";
+import { CampoNumero } from "@/components/admin/CampoNumero";
 
 function EditarProductoContenido() {
   const { id } = useParams<{ id: string }>();
@@ -16,7 +17,7 @@ function EditarProductoContenido() {
 
   const [producto, setProducto] = useState<Producto | null>(null);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [precioTexto, setPrecioTexto] = useState("0");
+  const [precio, setPrecio] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +27,7 @@ function EditarProductoContenido() {
     setCargando(true);
     const { data } = await supabase.from("productos").select("*").eq("id", id).single();
     setProducto(data);
-    if (data) setPrecioTexto(String(data.precio));
+    if (data) setPrecio(data.precio);
     setCargando(false);
   }, [id]);
 
@@ -56,7 +57,7 @@ function EditarProductoContenido() {
     setError(null);
     setGuardando(true);
 
-    const precioNumerico = parseFloat(precioTexto || "0");
+    const precioNumerico = precio;
 
     const { error: errorUpdate } = await supabase
       .from("productos")
@@ -158,14 +159,12 @@ function EditarProductoContenido() {
           </div>
           <div>
             <label className="block text-sm text-inkSoft mb-1">Precio (Bs)</label>
-            <input
+            <CampoNumero
               required
-              type="number"
               min={0}
               step="0.01"
-              inputMode="decimal"
-              value={precioTexto}
-              onChange={(e) => setPrecioTexto(e.target.value)}
+              valor={precio}
+              onCambio={setPrecio}
               className="w-full rounded-card border border-line px-4 py-2.5 outline-none focus:border-teal"
             />
           </div>

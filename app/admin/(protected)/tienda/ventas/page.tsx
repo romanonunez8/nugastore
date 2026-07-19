@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase, type Producto, type Variante, type Cliente, type Venta } from "@/lib/supabase";
 import { useAdminAuth } from "@/lib/admin-auth-context";
 import { mensajeErrorAmigable } from "@/lib/errors";
+import { CampoNumero } from "@/components/admin/CampoNumero";
 
 export default function VentasPage() {
   const { sesion } = useAdminAuth();
@@ -25,7 +26,9 @@ export default function VentasPage() {
   const [nuevoEmail, setNuevoEmail] = useState("");
   const [nuevoNacimiento, setNuevoNacimiento] = useState("");
 
-  const [ventasRecientes, setVentasRecientes] = useState<(Venta & { productos?: { nombre: string } })[]>([]);
+  const [ventasRecientes, setVentasRecientes] = useState<
+    (Venta & { productos?: { nombre: string; precio: number } })[]
+  >([]);
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +48,7 @@ export default function VentasPage() {
     if (!sesion?.tiendaId) return;
     const { data } = await supabase
       .from("ventas")
-      .select("*, variantes!inner(producto_id, productos!inner(tienda_id, nombre))")
+      .select("*, variantes!inner(producto_id, productos!inner(tienda_id, nombre, precio))")
       .eq("variantes.productos.tienda_id", sesion.tiendaId)
       .order("fecha", { ascending: false })
       .limit(10);
@@ -218,12 +221,11 @@ export default function VentasPage() {
         {varianteSel && (
           <div>
             <label className="block text-sm text-inkSoft mb-1">Cantidad</label>
-            <input
-              type="number"
+            <CampoNumero
               min={1}
               max={varianteSel.stock}
-              value={cantidad}
-              onChange={(e) => setCantidad(parseInt(e.target.value || "1", 10))}
+              valor={cantidad}
+              onCambio={setCantidad}
               className="w-28 rounded-card border border-line px-4 py-2.5 outline-none focus:border-teal"
             />
           </div>
@@ -355,20 +357,32 @@ export default function VentasPage() {
           <p className="text-inkSoft text-sm">Todavía no hay ventas registradas.</p>
         ) : (
           <div className="space-y-2">
-            {ventasRecientes.map((v) => (
-              <div
-                key={v.id}
-                className="flex items-center justify-between rounded-card border border-line bg-white px-4 py-2.5 text-sm"
-              >
-                <span className="text-ink">
-                  {v.productos?.nombre ?? "Producto"} × {v.cantidad}
-                </span>
-                <span className="text-inkSoft text-xs">
-                  {new Date(v.fecha).toLocaleDateString("es-BO")} · Bs{" "}
-                  {((v.precio_unitario ?? 0) * v.cantidad).toFixed(2)}
-                </span>
-              </div>
-            ))}
+            {ventasRecientes.map((v) => {
+              const conOferta =
+                v.productos?.precio != null &&
+                v.precio_unitario != null &&
+                v.precio_unitario < v.productos.precio;
+              return (
+                <div
+                  key={v.id}
+                  className="flex items-center justify-between rounded-card border border-line bg-white px-4 py-2.5 text-sm"
+                >
+                  <span className="text-ink">
+                    {v.productos?.nombre ?? "Producto"} × {v.cantidad}
+                    {conOferta && (
+                      <span className="ml-2 rounded-full bg-berrySoft px-2 py-0.5 text-[10px] font-medium text-berry">
+                        Oferta
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-inkSoft text-xs">
+                    Bs {(v.precio_unitario ?? 0).toFixed(2)} c/u ·{" "}
+                    {new Date(v.fecha).toLocaleDateString("es-BO")} · Total Bs{" "}
+                    {((v.precio_unitario ?? 0) * v.cantidad).toFixed(2)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

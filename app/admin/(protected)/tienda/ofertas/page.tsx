@@ -9,6 +9,8 @@ import {
 } from "@/lib/supabase";
 import { useAdminAuth } from "@/lib/admin-auth-context";
 import { mensajeErrorAmigable } from "@/lib/errors";
+import { valorFechaHoraLocal } from "@/lib/fecha";
+import { CampoNumero } from "@/components/admin/CampoNumero";
 
 function nombreObjetivo(
   oferta: Oferta,
@@ -16,7 +18,8 @@ function nombreObjetivo(
   categorias: Categoria[]
 ) {
   if (oferta.tipo === "producto") {
-    return productos.find((p) => p.id === oferta.producto_id)?.nombre ?? "Producto eliminado";
+    const p = productos.find((p) => p.id === oferta.producto_id);
+    return p ? `${p.nombre} (${p.codigo})` : "Producto eliminado";
   }
   if (oferta.tipo === "categoria") {
     return `Categoría: ${categorias.find((c) => c.id === oferta.categoria_id)?.nombre ?? "—"}`;
@@ -47,7 +50,7 @@ export default function OfertasPage() {
   const [modoDescuento, setModoDescuento] = useState<"porcentaje" | "fijo">("porcentaje");
   const [porcentaje, setPorcentaje] = useState<number>(10);
   const [precioFijo, setPrecioFijo] = useState<number>(0);
-  const [inicia, setInicia] = useState(() => new Date().toISOString().slice(0, 16));
+  const [inicia, setInicia] = useState(() => valorFechaHoraLocal());
   const [termina, setTermina] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -231,24 +234,22 @@ export default function OfertasPage() {
               </label>
             </div>
             {modoDescuento === "porcentaje" ? (
-              <input
-                type="number"
+              <CampoNumero
                 min={1}
                 max={90}
-                value={porcentaje}
-                onChange={(e) => setPorcentaje(parseFloat(e.target.value || "0"))}
+                valor={porcentaje}
+                onCambio={setPorcentaje}
                 className="w-28 rounded-card border border-line px-4 py-2.5 outline-none focus:border-teal"
               />
             ) : (
-              <input
-                type="number"
+              <CampoNumero
                 min={0}
                 step="0.01"
-                value={precioFijo}
-                onChange={(e) => setPrecioFijo(parseFloat(e.target.value || "0"))}
+                valor={precioFijo}
+                onCambio={setPrecioFijo}
                 disabled={tipo !== "producto"}
-                className="w-32 rounded-card border border-line px-4 py-2.5 outline-none focus:border-teal disabled:opacity-50"
                 placeholder="Bs"
+                className="w-32 rounded-card border border-line px-4 py-2.5 outline-none focus:border-teal disabled:opacity-50"
               />
             )}
             {modoDescuento === "fijo" && tipo !== "producto" && (

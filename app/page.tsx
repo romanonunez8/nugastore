@@ -25,10 +25,14 @@ export default function InicioPage() {
           .order("orden", { ascending: true }),
         supabase
           .from("productos")
+          // "tiendas!inner(*)" fuerza el join a modo INNER: sin el "!inner",
+          // Supabase/PostgREST ignora silenciosamente el filtro sobre la relación
+          // y las tiendas con suscripción vencida seguían apareciendo.
           .select(
-            "*, categorias(*), variantes(*), producto_fotos(*), tiendas(*)"
+            "*, categorias(*), variantes(*), producto_fotos(*), tiendas!inner(*)"
           )
-          .eq("activo", true),
+          .eq("activo", true)
+          .eq("tiendas.suscripcion_activa", true),
         supabase.from("ofertas").select("*"),
       ]);
 
@@ -48,7 +52,10 @@ export default function InicioPage() {
         p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
         p.codigo.toLowerCase().includes(busqueda.toLowerCase());
       const tieneStock = (p.variantes ?? []).some((v) => v.stock > 0);
-      return coincideCategoria && coincideBusqueda && tieneStock;
+      // Segunda capa de seguridad: si por algún motivo llegara un producto
+      // de una tienda con suscripcion_activa = false, se descarta también aquí.
+      const tiendaVisible = p.tiendas?.suscripcion_activa !== false;
+      return coincideCategoria && coincideBusqueda && tieneStock && tiendaVisible;
     });
   }, [productos, categoriaActiva, busqueda]);
 

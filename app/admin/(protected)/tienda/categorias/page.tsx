@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase, type Categoria } from "@/lib/supabase";
 import { useAdminAuth } from "@/lib/admin-auth-context";
+import { mensajeErrorAmigable } from "@/lib/errors";
+import { AccionesFila, AvisoFlotante, DialogoConfirmar } from "@/components/admin/AccionesFila";
+
+// Al tocar eliminar: si la categoría tiene productos no se borra (quedarían
+// sin categoría); se ofrece desactivarla.
+type Borrado = { categoria: Categoria; productos: number } | null;
 
 export default function CategoriasPage() {
   const { sesion } = useAdminAuth();
@@ -10,6 +16,61 @@ export default function CategoriasPage() {
   const [cargando, setCargando] = useState(true);
   const [nombreNueva, setNombreNueva] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [borrado, setBorrado] = useState<Borrado>(null);
+  const [procesando, setProcesando] = useState(false);
+  const [errorBorrado, setErrorBorrado] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const campos = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // El lápiz pone el cursor en el nombre para renombrarlo ahí mismo
+  function editar(id: string) {
+    const campo = campos.current[id];
+    if (!campo) return;
+    campo.focus();
+    campo.select();
+  }
+
+  async function pedirEliminar(cat: Categoria) {
+    setErrorBorrado(null);
+    const { count } = await supabase
+      .from("productos")
+      .select("id", { count: "exact", head: true })
+      .eq("categoria_id", cat.id);
+    setBorrado({ categoria: cat, productos: count ?? 0 });
+  }
+
+  async function confirmarEliminar() {
+    if (!borrado) return;
+    const cat = borrado.categoria;
+    setProcesando(true);
+    setErrorBorrado(null);
+
+    if (borrado.productos > 0) {
+      // Tiene productos: solo se desactiva
+      const { error } = await supabase.from("categorias").update({ activa: false }).eq("id", cat.id);
+      setProcesando(false);
+      if (error) return setErrorBorrado(mensajeErrorAmigable(error));
+      setCategorias((lista) => lista.map((c) => (c.id === cat.id ? { ...c, activa: false } : c)));
+      setBorrado(null);
+      setAviso(`"${cat.nombre}" fue desactivada.`);
+      return;
+    }
+
+    const { data, error } = await supabase.from("categorias").delete().eq("id", cat.id).select("id");
+    setProcesando(false);
+    if (error) {
+      setErrorBorrado(
+        error.code === "23503"
+          ? "Esta categoría está en uso (por ejemplo, en una oferta). Desactivala en lugar de eliminarla."
+          : mensajeErrorAmigable(error)
+      );
+      return;
+    }
+    if (!data || data.length === 0) return setErrorBorrado("No tenés permiso para eliminar esta categoría.");
+    setCategorias((lista) => lista.filter((c) => c.id !== cat.id));
+    setBorrado(null);
+    setAviso(`"${cat.nombre}" fue eliminada.`);
+  }
 
   const cargar = useCallback(async () => {
     if (!sesion?.tiendaId) return;
@@ -120,6 +181,10 @@ export default function CategoriasPage() {
               </div>
 
               <input
+                ref={(el) => {
+                  campos.current[cat.id] = el;
+                }}
+                aria-label={`Nombre de la categoría ${cat.nombre}`}
                 defaultValue={cat.nombre}
                 onBlur={(e) => {
                   if (e.target.value.trim() && e.target.value !== cat.nombre) {
@@ -137,10 +202,50 @@ export default function CategoriasPage() {
               >
                 {cat.activa ? "Activa" : "Desactivada"}
               </button>
+
+              <AccionesFila
+                nombre={cat.nombre}
+                onEditar={() => editar(cat.id)}
+                onEliminar={() => pedirEliminar(cat)}
+              />
             </div>
           ))}
         </div>
       )}
+
+      <AvisoFlotante texto={aviso} onCerrar={() => setAviso(null)} />
+
+      {borrado &&
+        (borrado.productos === 0 ? (
+          <DialogoConfirmar
+            titulo="¿Eliminar esta categoría?"
+            textoConfirmar="Eliminar"
+            textoProcesando="Eliminando…"
+            procesando={procesando}
+            error={errorBorrado}
+            onConfirmar={confirmarEliminar}
+            onCancelar={() => setBorrado(null)}
+          >
+            Vas a eliminar <span className="font-medium text-ink">{borrado.categoria.nombre}</span>. No tiene
+            productos, así que no afecta a tu catálogo.
+          </DialogoConfirmar>
+        ) : (
+          <DialogoConfirmar
+            titulo="Esta categoría tiene productos"
+            tono="normal"
+            textoConfirmar={borrado.categoria.activa ? "Desactivar" : "Ya está desactivada"}
+            textoProcesando="Desactivando…"
+            deshabilitarConfirmar={!borrado.categoria.activa}
+            procesando={procesando}
+            error={errorBorrado}
+            onConfirmar={confirmarEliminar}
+            onCancelar={() => setBorrado(null)}
+          >
+            <span className="font-medium text-ink">{borrado.categoria.nombre}</span> tiene {borrado.productos}{" "}
+            {borrado.productos === 1 ? "producto" : "productos"}. Para eliminarla, primero mové esos productos a otra
+            categoría. Mientras tanto podés desactivarla para que no se muestre en la tienda.
+          </DialogoConfirmar>
+        ))}
     </div>
   );
 }

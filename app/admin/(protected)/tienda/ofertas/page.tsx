@@ -11,6 +11,7 @@ import { useAdminAuth } from "@/lib/admin-auth-context";
 import { mensajeErrorAmigable } from "@/lib/errors";
 import { valorFechaHoraLocal } from "@/lib/fecha";
 import { CampoNumero } from "@/components/admin/CampoNumero";
+import { AccionesFila, AvisoFlotante, DialogoConfirmar } from "@/components/admin/AccionesFila";
 
 function nombreObjetivo(
   oferta: Oferta,
@@ -54,6 +55,12 @@ export default function OfertasPage() {
   const [termina, setTermina] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // null = creando una oferta nueva; con id = editando esa oferta
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [aEliminar, setAEliminar] = useState<Oferta | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     if (!sesion?.tiendaId) return;
@@ -93,7 +100,29 @@ export default function OfertasPage() {
     setModoDescuento("porcentaje");
     setPorcentaje(10);
     setPrecioFijo(0);
+    setInicia(valorFechaHoraLocal());
     setTermina("");
+    setEditandoId(null);
+    setError(null);
+  }
+
+  function editar(o: Oferta) {
+    setTipo(o.tipo as typeof tipo);
+    setProductoId(o.producto_id ?? "");
+    setCategoriaId(o.categoria_id ?? "");
+    if (o.porcentaje != null) {
+      setModoDescuento("porcentaje");
+      setPorcentaje(o.porcentaje);
+    } else {
+      setModoDescuento("fijo");
+      setPrecioFijo(o.precio_oferta ?? 0);
+    }
+    setInicia(valorFechaHoraLocal(new Date(o.inicia)));
+    setTermina(valorFechaHoraLocal(new Date(o.termina)));
+    setEditandoId(o.id);
+    setError(null);
+    setAbierto(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function crear(e: React.FormEvent) {
@@ -116,7 +145,7 @@ export default function OfertasPage() {
 
     setGuardando(true);
     try {
-      const { error: errorInsert } = await supabase.from("ofertas").insert({
+      const datos = {
         tipo,
         producto_id: tipo === "producto" ? productoId : null,
         categoria_id: tipo === "categoria" ? categoriaId : null,
@@ -125,23 +154,44 @@ export default function OfertasPage() {
         porcentaje: modoDescuento === "porcentaje" ? porcentaje : null,
         inicia: new Date(inicia).toISOString(),
         termina: new Date(termina).toISOString(),
-      });
-      if (errorInsert) throw errorInsert;
+      };
+      const { error: errorGuardar } = editandoId
+        ? await supabase.from("ofertas").update(datos).eq("id", editandoId)
+        : await supabase.from("ofertas").insert(datos);
+      if (errorGuardar) throw errorGuardar;
 
+      setAviso(editandoId ? "Oferta actualizada." : "Oferta creada.");
       limpiar();
       setAbierto(false);
       cargar();
     } catch (err) {
-      setError(`No se pudo crear la oferta: ${mensajeErrorAmigable(err)}`);
+      setError(
+        `No se pudo ${editandoId ? "guardar" : "crear"} la oferta: ${mensajeErrorAmigable(err)}`
+      );
     } finally {
       setGuardando(false);
     }
   }
 
-  async function eliminar(id: string) {
-    if (!confirm("¿Eliminar esta oferta?")) return;
-    await supabase.from("ofertas").delete().eq("id", id);
-    cargar();
+  async function eliminar() {
+    if (!aEliminar) return;
+    setEliminando(true);
+    setErrorEliminar(null);
+    const { data, error: errorBorrar } = await supabase
+      .from("ofertas")
+      .delete()
+      .eq("id", aEliminar.id)
+      .select("id");
+    setEliminando(false);
+    if (errorBorrar) return setErrorEliminar(mensajeErrorAmigable(errorBorrar));
+    if (!data || data.length === 0) return setErrorEliminar("No tenés permiso para eliminar esta oferta.");
+    setOfertas((lista) => lista.filter((o) => o.id !== aEliminar.id));
+    if (editandoId === aEliminar.id) {
+      limpiar();
+      setAbierto(false);
+    }
+    setAEliminar(null);
+    setAviso("Oferta eliminada.");
   }
 
   if (sesion && sesion.rol !== "admin_tienda") {
@@ -154,7 +204,10 @@ export default function OfertasPage() {
         <h1 className="font-display text-2xl text-ink">Ofertas</h1>
         {!abierto && (
           <button
-            onClick={() => setAbierto(true)}
+            onClick={() => {
+              limpiar();
+              setAbierto(true);
+            }}
             className="rounded-card bg-teal text-white font-medium px-5 py-2.5 shadow-card"
           >
             + Nueva oferta
@@ -164,6 +217,7 @@ export default function OfertasPage() {
 
       {abierto && (
         <form onSubmit={crear} className="space-y-4 rounded-card border border-line bg-white p-5">
+          <p className="font-medium text-ink">{editandoId ? "Editar oferta" : "Nueva oferta"}</p>
           <div>
             <label className="block text-sm text-inkSoft mb-1">Aplicar a</label>
             <select
@@ -290,7 +344,13 @@ export default function OfertasPage() {
               disabled={guardando}
               className="rounded-card bg-teal text-white font-medium px-5 py-2.5 shadow-card disabled:opacity-60"
             >
-              {guardando ? "Creando…" : "Crear oferta"}
+              {guardando
+                ? editandoId
+                  ? "Guardando…"
+                  : "Creando…"
+                : editandoId
+                ? "Guardar cambios"
+                : "Crear oferta"}
             </button>
             <button
               type="button"
@@ -333,17 +393,37 @@ export default function OfertasPage() {
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${estado.clase}`}>
                     {estado.texto}
                   </span>
-                  <button
-                    onClick={() => eliminar(o.id)}
-                    className="text-xs text-berry font-medium"
-                  >
-                    Eliminar
-                  </button>
+                  <AccionesFila
+                    nombre="oferta"
+                    onEditar={() => editar(o)}
+                    onEliminar={() => {
+                      setErrorEliminar(null);
+                      setAEliminar(o);
+                    }}
+                  />
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      <AvisoFlotante texto={aviso} onCerrar={() => setAviso(null)} />
+
+      {aEliminar && (
+        <DialogoConfirmar
+          titulo="¿Eliminar esta oferta?"
+          textoConfirmar="Eliminar"
+          textoProcesando="Eliminando…"
+          procesando={eliminando}
+          error={errorEliminar}
+          onConfirmar={eliminar}
+          onCancelar={() => setAEliminar(null)}
+        >
+          Vas a eliminar la oferta de{" "}
+          <span className="font-medium text-ink">{nombreObjetivo(aEliminar, productos, categorias)}</span>. Los
+          precios vuelven a la normalidad de inmediato.
+        </DialogoConfirmar>
       )}
     </div>
   );

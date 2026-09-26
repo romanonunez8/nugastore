@@ -4,12 +4,16 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { supabase, type Producto } from "@/lib/supabase";
 import { useAdminAuth } from "@/lib/admin-auth-context";
+import { AccionesFila, AvisoFlotante } from "@/components/admin/AccionesFila";
+import DialogoEliminarProducto from "@/components/admin/DialogoEliminarProducto";
 
 export default function ProductosPage() {
   const { sesion } = useAdminAuth();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
   const esVendedor = sesion?.rol === "editor";
+  const [aEliminar, setAEliminar] = useState<Producto | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     if (!sesion?.tiendaId) return;
@@ -92,18 +96,36 @@ export default function ProductosPage() {
                     </button>
                   )}
                   {!esVendedor && (
-                    <Link
-                      href={`/admin/tienda/productos/${p.id}`}
-                      className="text-sm font-medium text-teal"
-                    >
-                      Editar
-                    </Link>
+                    <AccionesFila
+                      nombre={p.nombre}
+                      hrefEditar={`/admin/tienda/productos/${p.id}`}
+                      onEliminar={() => setAEliminar(p)}
+                    />
                   )}
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      <AvisoFlotante texto={aviso} onCerrar={() => setAviso(null)} />
+
+      {aEliminar && (
+        <DialogoEliminarProducto
+          producto={aEliminar}
+          onCerrar={() => setAEliminar(null)}
+          onEliminado={(id, mensaje) => {
+            setProductos((lista) => lista.filter((x) => x.id !== id));
+            setAEliminar(null);
+            setAviso(mensaje);
+          }}
+          onDesactivado={(id, mensaje) => {
+            setProductos((lista) => lista.map((x) => (x.id === id ? { ...x, activo: false } : x)));
+            setAEliminar(null);
+            setAviso(mensaje);
+          }}
+        />
       )}
     </div>
   );

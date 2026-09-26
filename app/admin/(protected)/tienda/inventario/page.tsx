@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
 import { supabase, fotoPortada, stockTotal, type Producto } from "@/lib/supabase";
 import { useAdminAuth } from "@/lib/admin-auth-context";
+import { AccionesFila, AvisoFlotante } from "@/components/admin/AccionesFila";
+import DialogoEliminarProducto from "@/components/admin/DialogoEliminarProducto";
 
 function nombreArchivo(extension: string) {
   const fecha = new Date().toISOString().slice(0, 10);
@@ -24,6 +25,8 @@ export default function InventarioPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
   const [exportando, setExportando] = useState<"excel" | "pdf" | null>(null);
+  const [aEliminar, setAEliminar] = useState<Producto | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     if (!sesion?.tiendaId) return;
@@ -189,12 +192,11 @@ export default function InventarioPage() {
                       </span>
                     </td>
                     <td className="px-3 py-2">
-                      <Link
-                        href={`/admin/tienda/productos/${p.id}`}
-                        className="font-medium text-teal"
-                      >
-                        Editar
-                      </Link>
+                      <AccionesFila
+                        nombre={p.nombre}
+                        hrefEditar={`/admin/tienda/productos/${p.id}`}
+                        onEliminar={() => setAEliminar(p)}
+                      />
                     </td>
                   </tr>
                 );
@@ -202,6 +204,25 @@ export default function InventarioPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      <AvisoFlotante texto={aviso} onCerrar={() => setAviso(null)} />
+
+      {aEliminar && (
+        <DialogoEliminarProducto
+          producto={aEliminar}
+          onCerrar={() => setAEliminar(null)}
+          onEliminado={(id, mensaje) => {
+            setProductos((lista) => lista.filter((x) => x.id !== id));
+            setAEliminar(null);
+            setAviso(mensaje);
+          }}
+          onDesactivado={(id, mensaje) => {
+            setProductos((lista) => lista.map((x) => (x.id === id ? { ...x, activo: false } : x)));
+            setAEliminar(null);
+            setAviso(mensaje);
+          }}
+        />
       )}
     </div>
   );
